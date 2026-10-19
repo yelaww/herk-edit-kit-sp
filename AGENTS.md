@@ -20,6 +20,7 @@ For one stage, load the matching local skill:
 
 | Need | Skill |
 | --- | --- |
+| **Aymeric's TikTok santé publique videos (default for this fork)** | `tiktok-sp` |
 | Reels, Shorts, and short advertisements | `short-form-edit` |
 | Motion-design showreels and brand reels cut to music | `motion-showreel` |
 | Existing May Shorts example maintenance | `short-form-video` |
@@ -61,7 +62,8 @@ new personal footage. Never print secrets or copy private media into library exa
 Before choosing a transcription, asset-generation, or voiceover service, read
 `docs/TOOLS-AND-API-KEYS.md` and check the user's provider choice and local setup.
 ElevenLabs Scribe is Nate's default; honor requests for OpenAI Whisper, local
-Whisper, or another provider. Normalize verified word timestamps for the cutting
+Whisper, or another provider. In this fork, default to local Whisper
+(`scripts/transcribe-whisper-local.py`, French). Normalize verified word timestamps for the cutting
 tools. The included transcription script is ElevenLabs-only. Kie.ai is optional
 and needs a configured integration and credits. Reuse existing transcripts and
 assets; make any unapproved uploads or paid calls concrete before asking.

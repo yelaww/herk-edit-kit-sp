@@ -22,6 +22,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join, resolve, basename, extname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, exit } from "node:process";
+import { filterScriptArgs } from "../../../../scripts/lib/media-compat.mjs";
 
 function die(m, c = 1) { console.error(m); exit(c); }
 
@@ -164,7 +165,7 @@ if (opts.video) {
   summary.video = { input: videoPath, output: outputPath, rendered: false };
   if (opts.apply) {
     console.error(`rendering cut video -> ${outputPath}`);
-    const ff = spawnSync("ffmpeg", ["-y", "-i", videoPath, "-/filter_complex", scriptPath, "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", outputPath], { stdio: ["ignore", "ignore", "inherit"] });
+    const ff = spawnSync("ffmpeg", ["-y", "-i", videoPath, ...filterScriptArgs(scriptPath), "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", outputPath], { stdio: ["ignore", "ignore", "inherit"] });
     if (ff.status !== 0) die(`ffmpeg failed (status ${ff.status})`, ff.status ?? 1);
     summary.video.rendered = true;
   } else summary.hint = "re-run with --apply to render";
