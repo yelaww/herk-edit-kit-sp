@@ -24,12 +24,15 @@
 //   --head-pad <seconds>  silence kept before the first word (default 0.22)
 //   --tail-pad <seconds>  silence kept after the last word (default 0.34)
 //   --apply               actually run ffmpeg to render the cut video
+//   --no-audio-refine     keep raw transcript boundaries (default: with --video,
+//                         each cut is shrunk to frames that are really silent)
 //   --help
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join, resolve, basename, extname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, exit } from "node:process";
+import { filterScriptArgs, analyseLoudness, refineDeletesWithAudio } from "../../../../scripts/lib/media-compat.mjs";
 
 function die(msg, code = 1) {
   console.error(msg);
@@ -55,6 +58,7 @@ const opts = {
   headPad: 0.22,
   tailPad: 0.34,
   apply: false,
+  audioRefine: true,
 };
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
@@ -65,6 +69,7 @@ for (let i = 0; i < args.length; i++) {
   else if (a === "--head-pad") opts.headPad = Number(args[++i]);
   else if (a === "--tail-pad") opts.tailPad = Number(args[++i]);
   else if (a === "--apply") opts.apply = true;
+  else if (a === "--no-audio-refine") opts.audioRefine = false;
   else if (a.startsWith("--")) die(`unknown option: ${a}`);
   else if (!opts.transcript) opts.transcript = a;
   else die(`unexpected argument: ${a}`);
@@ -147,7 +152,22 @@ for (let i = 1; i < words.length; i++) {
   }
 }
 
-const mergedDeletes = mergeRanges(deleteRanges);
+let mergedDeletes = mergeRanges(deleteRanges);
+
+// SP fork: transcript timestamps drift; only delete audio that is really quiet.
+let audioRefine = null;
+if (opts.video && opts.audioRefine && existsSync(resolve(opts.video))) {
+  const loud = analyseLoudness(resolve(opts.video));
+  const before = mergedDeletes.length;
+  mergedDeletes = refineDeletesWithAudio(mergedDeletes, loud, { duration });
+  audioRefine = {
+    noiseFloorDb: Number(loud.floor.toFixed(1)),
+    speechDb: Number(loud.speech.toFixed(1)),
+    thresholdDb: Number(loud.threshold.toFixed(1)),
+    rangesBefore: before,
+    rangesAfter: mergedDeletes.length,
+  };
+}
 
 // ---- keep ranges = the complement of the deletes ----
 const keepRanges = [];
@@ -206,7 +226,7 @@ const stem = basename(transcriptPath, extname(transcriptPath)).replace(/[-.]?tra
 const outDir = opts.outDir ? resolve(opts.outDir) : dirname(transcriptPath);
 mkdirSync(outDir, { recursive: true });
 
-const params = { gap: opts.gap, headPad: opts.headPad, tailPad: opts.tailPad };
+const params = { gap: opts.gap, headPad: opts.headPad, tailPad: opts.tailPad, audioRefine };
 const edl = {
   agent: "cut-silences",
   params,
@@ -277,7 +297,7 @@ if (opts.video) {
 
   const ffArgs = [
     "-y", "-i", videoPath,
-    "-/filter_complex", scriptPath,
+    ...filterScriptArgs(scriptPath),
     "-map", "[v]", "-map", "[a]",
     "-c:v", "libx264", "-preset", "medium", "-crf", "18",
     "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
