@@ -73,3 +73,4 @@ Ajouter ici chaque retour d'Aymeric transformé en règle, daté.
 
 - 2026-10-19 — Les coupes de silence calées sur les horodatages du transcript coupaient des mots → coupes recalculées sur le volume réel du son.
 - 2026-10-19 — Graphiques : disposition D retenue ; B et C écartées.
+- 2026-10-19 — « L'image tremble » : zooms faits avec ffmpeg `scale`+`crop` (arrondis au pixel) → à-coups. Toujours animer les zooms au sous-pixel (HyperFrames/GSAP, ou `cv2.warpAffine` INTER_CUBIC autour d'un point fixe sur le visage) et vérifier la fluidité image par image avant de livrer.
